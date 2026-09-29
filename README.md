@@ -16,3 +16,5 @@
 Скопируйте папку `BidItemPopup` в `Interface\AddOns` и включите аддон на экране выбора персонажа.
 
 Настройки: `/biditem options`.
+
+История изменений: [CHANGELOG.md](CHANGELOG.md).
