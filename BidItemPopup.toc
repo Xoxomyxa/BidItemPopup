@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: Bid Item Popup
+## Notes: Opens a movable item window when a raid bid is announced.
+## Author: Megerka
+## Version: 1.8
+## DefaultState: Enabled
+## SavedVariables: BidItemPopupDB
+
+BidItemPopup.lua
+Options.lua
