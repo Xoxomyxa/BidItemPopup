@@ -520,11 +520,15 @@ function AlertOutbid()
   if not frame:IsShown() or uiMinimized then
     return
   end
-  flashFrame:SetFrameLevel(frame:GetFrameLevel() + 30)
-  flashRemain = 0.45
-  flashTex:SetAlpha(0.7)
-  flashFrame:Show()
-  if BidItemPopupDB and BidItemPopupDB.playOutbidSound ~= false then
+  local flashOn = not BidItemPopupDB or BidItemPopupDB.flashOnOutbid ~= false
+  local soundOn = not BidItemPopupDB or BidItemPopupDB.playOutbidSound ~= false
+  if flashOn then
+    flashFrame:SetFrameLevel(frame:GetFrameLevel() + 30)
+    flashRemain = 0.45
+    flashTex:SetAlpha(0.7)
+    flashFrame:Show()
+  end
+  if soundOn then
     PlaySound("igQuestFailed")
   end
 end
@@ -577,9 +581,17 @@ local tip = CreateFrame("GameTooltip", "BidItemPopupTip", frame, "GameTooltipTem
 tip:SetFrameLevel(frame:GetFrameLevel() + 2)
 tip:EnableMouse(false)
 
-local hideTipBtn = CreateFrame("Button", nil, tip, "UIPanelCloseButton")
-hideTipBtn:SetPoint("TOPRIGHT", tip, "TOPRIGHT", 4, 4)
+local hideTipBtn = CreateFrame("Button", nil, tip)
+hideTipBtn:SetWidth(24)
+hideTipBtn:SetHeight(24)
+hideTipBtn:SetPoint("TOPRIGHT", tip, "TOPRIGHT", 2, 2)
 hideTipBtn:SetFrameLevel(tip:GetFrameLevel() + 5)
+hideTipBtn:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-Minimize-Up")
+hideTipBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Minimize-Down")
+hideTipBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+if hideTipBtn:GetHighlightTexture() then
+  hideTipBtn:GetHighlightTexture():SetBlendMode("ADD")
+end
 
 local noBidText = frame:CreateFontString(nil, "OVERLAY")
 noBidText:SetFont(STANDARD_TEXT_FONT, 18, "OUTLINE")
@@ -862,13 +874,15 @@ local function EnsureListRow(i)
   row.nameFS = nameFS
   row.bidFS = bidFS
   row.netFS = netFS
-  local strike = row:CreateTexture(nil, "OVERLAY")
+  local strikeHolder = CreateFrame("Frame", nil, row)
+  strikeHolder:SetFrameLevel(row:GetFrameLevel() + 5)
+  strikeHolder:EnableMouse(false)
+  local strike = strikeHolder:CreateTexture(nil, "OVERLAY")
   strike:SetTexture("Interface\\Buttons\\WHITE8X8")
-  strike:SetVertexColor(0.75, 0.75, 0.75)
+  strike:SetVertexColor(0.95, 0.95, 0.95)
   strike:SetHeight(2)
-  strike:SetPoint("LEFT", row, "LEFT", 6, 0)
-  strike:SetPoint("RIGHT", row, "RIGHT", -6, 0)
   strike:Hide()
+  row.strikeHolder = strikeHolder
   row.strike = strike
   listRows[i] = row
   return row
@@ -1114,26 +1128,35 @@ function UpdateBidUI()
     end
     row.nameFS:SetText(name)
     local r, g, b = ClassColor(info.classFile)
-    if withdrawn then
-      r, g, b = 0.55, 0.55, 0.55
-      row.bidFS:SetTextColor(0.55, 0.55, 0.55)
-      row.netFS:SetTextColor(0.45, 0.45, 0.45)
-      if row.strike then
-        row.strike:Show()
-      end
-    else
-      row.bidFS:SetTextColor(1, 1, 0.15)
-      row.netFS:SetTextColor(0.75, 0.75, 0.75)
-      if row.strike then
-        row.strike:Hide()
-      end
-    end
     row.nameFS:SetTextColor(r, g, b)
     row.bidFS:SetText(tostring(info.amount))
     if info.net then
       row.netFS:SetText(tostring(info.net))
     else
       row.netFS:SetText("-")
+    end
+    row.netFS:SetTextColor(0.75, 0.75, 0.75)
+    if withdrawn then
+      row.bidFS:SetTextColor(0.75, 0.75, 0.75)
+      if row.strike then
+        local w = row.bidFS:GetStringWidth() or 20
+        if w < 8 then
+          w = 8
+        end
+        row.strike:ClearAllPoints()
+        row.strike:SetWidth(w + 2)
+        row.strike:SetHeight(2)
+        row.strike:SetPoint("CENTER", row.bidFS, "CENTER", 0, 0)
+        if row.strikeHolder then
+          row.strikeHolder:SetFrameLevel(row:GetFrameLevel() + 5)
+        end
+        row.strike:Show()
+      end
+    else
+      row.bidFS:SetTextColor(1, 1, 0.15)
+      if row.strike then
+        row.strike:Hide()
+      end
     end
   end
   RelayoutKeepTop()
@@ -1372,6 +1395,9 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
       end
       if BidItemPopupDB.playOutbidSound == nil then
         BidItemPopupDB.playOutbidSound = true
+      end
+      if BidItemPopupDB.flashOnOutbid == nil then
+        BidItemPopupDB.flashOnOutbid = true
       end
       if GuildRoster then
         GuildRoster()

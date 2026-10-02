@@ -33,7 +33,14 @@ end, function(v)
   BidItemPopupDB.showAllBids = v
 end)
 
-local sound = Check("BidItemPopupSoundCheck", "Sound when I am outbid", -104, function()
+local flash = Check("BidItemPopupFlashCheck", "Flash when I am outbid", -104, function()
+  return not BidItemPopupDB or BidItemPopupDB.flashOnOutbid ~= false
+end, function(v)
+  BidItemPopupDB = BidItemPopupDB or {}
+  BidItemPopupDB.flashOnOutbid = v
+end)
+
+local sound = Check("BidItemPopupSoundCheck", "Sound when I am outbid", -136, function()
   return not BidItemPopupDB or BidItemPopupDB.playOutbidSound ~= false
 end, function(v)
   BidItemPopupDB = BidItemPopupDB or {}
@@ -41,12 +48,13 @@ end, function(v)
 end)
 
 local hint = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-hint:SetPoint("TOPLEFT", 16, -150)
+hint:SetPoint("TOPLEFT", 16, -182)
 hint:SetJustifyH("LEFT")
-hint:SetText("If Show all bids is off, the list is your class only.\nA raid \"-\" strikes through the current bid; a new number or all in makes it live again.\nFlash on outbid is always on; sound follows the checkbox above.")
+hint:SetText("If Show all bids is off, the list is your class only.\nA raid \"-\" strikes through the current bid; a new number or all in makes it live again.")
 
 panel.refresh = function()
   showAll:Refresh()
+  flash:Refresh()
   sound:Refresh()
 end
 
