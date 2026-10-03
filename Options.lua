@@ -26,11 +26,11 @@ local function Check(name, label, y, getter, setter)
   return cb
 end
 
-local showAll = Check("BidItemPopupShowAllCheck", "Show all bids", -72, function()
-  return BidItemPopupDB and BidItemPopupDB.showAllBids == true
+local showAll = Check("BidItemPopupShowAllCheck", "Show items I cannot equip", -72, function()
+  return BidItemPopupDB and BidItemPopupDB.showCannotEquip == true
 end, function(v)
   BidItemPopupDB = BidItemPopupDB or {}
-  BidItemPopupDB.showAllBids = v
+  BidItemPopupDB.showCannotEquip = v
 end)
 
 local flash = Check("BidItemPopupFlashCheck", "Flash when I am outbid", -104, function()
@@ -50,7 +50,7 @@ end)
 local hint = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 hint:SetPoint("TOPLEFT", 16, -182)
 hint:SetJustifyH("LEFT")
-hint:SetText("If Show all bids is off, the list is your class only.\nA raid \"-\" strikes through the current bid; a new number or all in makes it live again.")
+hint:SetText("If the box is off, the window opens only for items you can equip.\nIf it is on, mail, plate and other unsuitable auctions open too.\nA raid \"-\" strikes through the current bid; a new number or all in makes it live again.")
 
 panel.refresh = function()
   showAll:Refresh()

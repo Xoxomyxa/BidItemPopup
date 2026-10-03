@@ -1,212 +1,68 @@
 local ADDON = "BidItemPopup"
 
--- Auction subclass indexes from GetAuctionItemSubClasses (WotLK 3.3.5).
-local W = {
-  AXE1 = 1, AXE2 = 2, BOW = 3, GUN = 4,
-  MACE1 = 5, MACE2 = 6, POLE = 7,
-  SWORD1 = 8, SWORD2 = 9, STAFF = 10,
-  FIST = 11, MISC = 12, DAGGER = 13,
-  THROWN = 14, XBOW = 15, WAND = 16, FISH = 17,
-}
-local A = {
-  MISC = 1, CLOTH = 2, LEATHER = 3, MAIL = 4, PLATE = 5,
-  SHIELD = 6, LIBRAM = 7, IDOL = 8, TOTEM = 9, SIGIL = 10,
-}
-
--- Slots every class can wear; armor subtype is ignored (cloaks are Cloth).
-local FREE_SLOTS = {
-  INVTYPE_NECK = true,
-  INVTYPE_FINGER = true,
-  INVTYPE_TRINKET = true,
-  INVTYPE_CLOAK = true,
-  INVTYPE_BODY = true,
-  INVTYPE_TABARD = true,
-  INVTYPE_BAG = true,
-}
-
-local CLASS_GEAR = {
-  WARRIOR = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.MAIL] = true, [A.PLATE] = true, [A.SHIELD] = true },
-    weapon = {
-      [W.AXE1] = true, [W.AXE2] = true, [W.BOW] = true, [W.GUN] = true,
-      [W.MACE1] = true, [W.MACE2] = true, [W.POLE] = true,
-      [W.SWORD1] = true, [W.SWORD2] = true, [W.STAFF] = true, [W.FIST] = true,
-      [W.MISC] = true, [W.DAGGER] = true, [W.THROWN] = true, [W.XBOW] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  PALADIN = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.MAIL] = true, [A.PLATE] = true, [A.SHIELD] = true, [A.LIBRAM] = true },
-    weapon = {
-      [W.AXE1] = true, [W.AXE2] = true, [W.MACE1] = true, [W.MACE2] = true, [W.POLE] = true,
-      [W.SWORD1] = true, [W.SWORD2] = true, [W.MISC] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  HUNTER = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.MAIL] = true },
-    weapon = {
-      [W.AXE1] = true, [W.AXE2] = true, [W.BOW] = true, [W.GUN] = true, [W.POLE] = true,
-      [W.SWORD1] = true, [W.SWORD2] = true, [W.STAFF] = true, [W.FIST] = true,
-      [W.MISC] = true, [W.DAGGER] = true, [W.THROWN] = true, [W.XBOW] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  ROGUE = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true },
-    weapon = {
-      [W.AXE1] = true, [W.BOW] = true, [W.GUN] = true, [W.MACE1] = true, [W.SWORD1] = true,
-      [W.FIST] = true, [W.MISC] = true, [W.DAGGER] = true, [W.THROWN] = true, [W.XBOW] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  PRIEST = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true },
-    weapon = { [W.MACE1] = true, [W.STAFF] = true, [W.MISC] = true, [W.DAGGER] = true, [W.WAND] = true, [W.FISH] = true },
-    holdable = true,
-  },
-  DEATHKNIGHT = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.MAIL] = true, [A.PLATE] = true, [A.SIGIL] = true },
-    weapon = {
-      [W.AXE1] = true, [W.AXE2] = true, [W.MACE1] = true, [W.MACE2] = true, [W.POLE] = true,
-      [W.SWORD1] = true, [W.SWORD2] = true, [W.MISC] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  SHAMAN = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.MAIL] = true, [A.SHIELD] = true, [A.TOTEM] = true },
-    weapon = {
-      [W.AXE1] = true, [W.AXE2] = true, [W.MACE1] = true, [W.MACE2] = true, [W.STAFF] = true,
-      [W.FIST] = true, [W.MISC] = true, [W.DAGGER] = true, [W.FISH] = true,
-    },
-    holdable = false,
-  },
-  MAGE = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true },
-    weapon = { [W.SWORD1] = true, [W.STAFF] = true, [W.MISC] = true, [W.DAGGER] = true, [W.WAND] = true, [W.FISH] = true },
-    holdable = true,
-  },
-  WARLOCK = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true },
-    weapon = { [W.SWORD1] = true, [W.STAFF] = true, [W.MISC] = true, [W.DAGGER] = true, [W.WAND] = true, [W.FISH] = true },
-    holdable = true,
-  },
-  DRUID = {
-    armor = { [A.MISC] = true, [A.CLOTH] = true, [A.LEATHER] = true, [A.IDOL] = true },
-    weapon = {
-      [W.MACE1] = true, [W.MACE2] = true, [W.POLE] = true, [W.STAFF] = true,
-      [W.FIST] = true, [W.MISC] = true, [W.DAGGER] = true, [W.FISH] = true,
-    },
-    holdable = true,
-  },
-}
-
-local function SubclassIndex(classIndex, subTypeName)
-  if not subTypeName then
-    return nil
+SLASH_BIDITEMPOPUP1 = "/biditem"
+SlashCmdList["BIDITEMPOPUP"] = function(msg)
+  if BidItemPopup_OnSlash then
+    return BidItemPopup_OnSlash(msg)
   end
-  local subs = { GetAuctionItemSubClasses(classIndex) }
-  for i, name in ipairs(subs) do
-    if name == subTypeName then
-      return i
-    end
-  end
-  return nil
+  DEFAULT_CHAT_FRAME:AddMessage("|cffff0000" .. ADDON .. "|r: файл оборвался при загрузке, окно открыть нечем.")
 end
-
-local function AuctionClassIndex(itemType)
-  if not itemType then
-    return nil
-  end
-  local classes = { GetAuctionItemClasses() }
-  for i, name in ipairs(classes) do
-    if name == itemType then
-      return i
-    end
-  end
-  return nil
+if hash_SlashCmdList then
+  hash_SlashCmdList["/BIDITEM"] = SlashCmdList["BIDITEMPOPUP"]
 end
 
 local scanner = CreateFrame("GameTooltip", "BidItemPopupScanner", nil, "GameTooltipTemplate")
 scanner:SetOwner(UIParent, "ANCHOR_NONE")
 
-local function AllowedByClassLine(itemLink)
-  if not ITEM_CLASSES_ALLOWED or not itemLink then
-    return nil
+local function CanPlayerUseItem(itemLink)
+  local name, _, _, _, _, _, _, _, equipLoc = GetItemInfo(itemLink)
+  if not name then
+    return true
   end
-  scanner:ClearLines()
+  if not IsEquippableItem(itemLink) then
+    if not equipLoc or equipLoc == "" then
+      return true
+    end
+    return false
+  end
   scanner:SetOwner(UIParent, "ANCHOR_NONE")
+  scanner:ClearLines()
   scanner:SetHyperlink(itemLink)
-
-  local pattern = ITEM_CLASSES_ALLOWED:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
-  pattern = "^" .. pattern:gsub("%%%%s", "(.+)")
-
-  local playerClass = UnitClass("player")
-  for i = 1, scanner:NumLines() do
-    local line = _G["BidItemPopupScannerTextLeft" .. i]
-    local text = line and line:GetText()
-    if text then
-      local listed = text:match(pattern)
-      if listed then
-        for name in listed:gmatch("[^,/]+") do
-          name = name:gsub("^%s+", ""):gsub("%s+$", "")
-          if name == playerClass then
-            return true
-          end
+  local tipName = scanner:GetName()
+  local levelPrefix
+  if type(ITEM_MIN_LEVEL) == "string" then
+    levelPrefix = ITEM_MIN_LEVEL:match("^(.-)%%d")
+  end
+  local usable = true
+  local lines = scanner:NumLines() or 0
+  for i = 2, lines do
+    local right = _G[tipName .. "TextRight" .. i]
+    local rightText = right and right:GetText()
+    if rightText and rightText ~= "" then
+      local r, g, b = right:GetTextColor()
+      if r and r > 0.85 and g < 0.25 and b < 0.25 then
+        usable = false
+        break
+      end
+    end
+    local left = _G[tipName .. "TextLeft" .. i]
+    local leftText = left and left:GetText()
+    if leftText and leftText ~= "" then
+      local skipLevel = levelPrefix and levelPrefix ~= "" and leftText:sub(1, #levelPrefix) == levelPrefix
+      if not skipLevel then
+        local r, g, b = left:GetTextColor()
+        if r and r > 0.85 and g < 0.25 and b < 0.25 then
+          usable = false
+          break
         end
-        return false
       end
     end
   end
-  return nil
-end
-
-local function CanPlayerUseItem(itemLink)
-  local name, _, _, _, _, itemType, itemSubType, _, equipLoc = GetItemInfo(itemLink)
-  if not name then
-    scanner:SetOwner(UIParent, "ANCHOR_NONE")
-    scanner:SetHyperlink(itemLink)
-    name, _, _, _, _, itemType, itemSubType, _, equipLoc = GetItemInfo(itemLink)
-  end
-
-  local classAllowed = AllowedByClassLine(itemLink)
-  if classAllowed == false then
-    return false
-  end
-  if not name then
+  scanner:Hide()
+  if lines < 2 then
     return true
   end
-
-  local _, classToken = UnitClass("player")
-  local spec = CLASS_GEAR[classToken]
-  if not spec then
-    return true
-  end
-
-  if equipLoc == "INVTYPE_HOLDABLE" then
-    return spec.holdable
-  end
-  if equipLoc and FREE_SLOTS[equipLoc] then
-    return true
-  end
-
-  local auctionClass = AuctionClassIndex(itemType)
-  if auctionClass == 1 then
-    local idx = SubclassIndex(1, itemSubType)
-    if not idx then
-      return true
-    end
-    return spec.weapon[idx] == true
-  end
-  if auctionClass == 2 then
-    local idx = SubclassIndex(2, itemSubType)
-    if not idx then
-      return true
-    end
-    return spec.armor[idx] == true
-  end
-
-  return true
+  return usable
 end
 
 local TITLE_H = 32
@@ -216,7 +72,7 @@ local PAD = 16
 local MIN_WIDTH = 340
 local PLUS_W = 58
 local PLUS_GAP = 4
-local PLUS_AMOUNTS = { 10, 100, 300, 500, 1000 }
+local PLUS_AMOUNTS = { 10, 100, 500, 1000 }
 local LIST_ROW_H = 22
 local LIST_FONT = 14
 local LIST_FONT_LEAD = 17
@@ -253,17 +109,19 @@ local lastHref
 local lastItemName
 local lastItemQuality
 local itemHidden = false
+local cmp = {
+  on = false,
+  slots = 0,
+  known = false,
+  pad = 0,
+  rows = {},
+  lineText = {},
+  laidTipH = 0,
+}
 local uiMinimized = false
 local bidOrder = {}
 local bidByName = {}
 local listRows = {}
-local RelayoutKeepTop
-local UpdateBidUI
-local CancelCloseTimer
-local StartCloseTimer
-local RecalcLead
-local CollectVisibleBids
-local AlertOutbid
 
 local function PlayerKey()
   return (GetRealmName() or "?") .. "-" .. (UnitName("player") or "?")
@@ -368,19 +226,38 @@ local function ParseNet(note)
   return tonumber(note:match("[Nn]et:%s*(%d+)"))
 end
 
+local guildByName = {}
+local guildCacheBuilt = false
+
+local function RebuildGuildCache()
+  wipe(guildByName)
+  local total = GetNumGuildMembers() or 0
+  for i = 1, total do
+    local gname, _, _, _, _, _, _, officernote, _, _, classFile = GetGuildRosterInfo(i)
+    local name = NormalizeName(gname)
+    if name then
+      guildByName[name] = {
+        net = ParseNet(officernote),
+        classFile = classFile,
+      }
+    end
+  end
+  guildCacheBuilt = true
+end
+
 local function GetGuildNetAndClass(name)
   name = NormalizeName(name)
   if not name then
     return nil, nil
   end
-  local total = GetNumGuildMembers() or 0
-  for i = 1, total do
-    local gname, _, _, _, _, _, _, officernote, _, _, classFile = GetGuildRosterInfo(i)
-    if NormalizeName(gname) == name then
-      return ParseNet(officernote), classFile
-    end
+  if not guildCacheBuilt then
+    RebuildGuildCache()
   end
-  return nil, nil
+  local info = guildByName[name]
+  if not info then
+    return nil, nil
+  end
+  return info.net, info.classFile
 end
 
 local function ClassColor(fileName)
@@ -391,34 +268,14 @@ local function ClassColor(fileName)
   return 1, 1, 1
 end
 
-local function PlayerClassFile()
-  local _, token = UnitClass("player")
-  return token
-end
-
 local function ShowAllBids()
-  return BidItemPopupDB and BidItemPopupDB.showAllBids == true
-end
-
-local function BidMatchesClassFilter(info)
-  if ShowAllBids() then
-    return true
-  end
-  local mine = PlayerClassFile()
-  if not mine then
-    return true
-  end
-  if not info or not info.classFile then
-    return true
-  end
-  return info.classFile == mine
+  return BidItemPopupDB and BidItemPopupDB.showCannotEquip == true
 end
 
 function CollectVisibleBids()
   local names = {}
   for _, name in ipairs(bidOrder) do
-    local info = bidByName[name]
-    if info and BidMatchesClassFilter(info) then
+    if bidByName[name] then
       names[#names + 1] = name
     end
   end
@@ -430,7 +287,7 @@ function RecalcLead()
   currentBidder = nil
   for _, name in ipairs(bidOrder) do
     local info = bidByName[name]
-    if info and not info.withdrawn and BidMatchesClassFilter(info) then
+    if info and not info.withdrawn then
       if not currentBid or info.amount > currentBid then
         currentBid = info.amount
         currentBidder = name
@@ -581,6 +438,18 @@ local tip = CreateFrame("GameTooltip", "BidItemPopupTip", frame, "GameTooltipTem
 tip:SetFrameLevel(frame:GetFrameLevel() + 2)
 tip:EnableMouse(false)
 
+local compareBtn = CreateFrame("Button", nil, tip, "UIPanelButtonTemplate")
+compareBtn:SetWidth(78)
+compareBtn:SetHeight(20)
+compareBtn:SetText("compare")
+compareBtn:SetFrameLevel(tip:GetFrameLevel() + 6)
+compareBtn:Hide()
+compareBtn:SetScript("OnClick", function()
+  cmp.on = not cmp.on
+  compareBtn:SetText(cmp.on and "item" or "compare")
+  RelayoutKeepTop()
+end)
+
 local hideTipBtn = CreateFrame("Button", nil, tip)
 hideTipBtn:SetWidth(24)
 hideTipBtn:SetHeight(24)
@@ -649,6 +518,28 @@ tenBtn:SetScript("OnClick", function()
 end)
 
 local plusButtons = {}
+local roundBtn
+
+local function RoundBidPlace(amount)
+  amount = math.floor((amount or 0) + 0.5)
+  if amount < 1 then
+    return amount
+  end
+  local step = 1
+  local n = amount
+  while n >= 10 do
+    n = math.floor(n / 10)
+    step = step * 10
+  end
+  if step < 100 then
+    step = 100
+  end
+  local rem = amount % step
+  if rem == 0 then
+    return amount
+  end
+  return amount + (step - rem)
+end
 local plusRow = CreateFrame("Frame", nil, frame)
 plusRow:SetHeight(ROW_H)
 
@@ -803,13 +694,19 @@ goldTicker:SetScript("OnUpdate", function(self, elapsed)
   end
 end)
 
+local partnerPollAcc = 0
 partnerPoll = CreateFrame("Frame")
 partnerPoll:Hide()
-partnerPoll:SetScript("OnUpdate", function(self)
+partnerPoll:SetScript("OnUpdate", function(self, elapsed)
   if not tradeWatch then
     self:Hide()
     return
   end
+  partnerPollAcc = partnerPollAcc + elapsed
+  if partnerPollAcc < 0.25 then
+    return
+  end
+  partnerPollAcc = 0
   SnapshotTrade()
 end)
 
@@ -884,8 +781,1351 @@ local function EnsureListRow(i)
   strike:Hide()
   row.strikeHolder = strikeHolder
   row.strike = strike
+  row.leadFont = false
   listRows[i] = row
   return row
+end
+
+local CLASS_SHORT = {
+  WARRIOR = "War",
+  PALADIN = "Pal",
+  HUNTER = "Hunt",
+  ROGUE = "Rog",
+  PRIEST = "Priest",
+  DEATHKNIGHT = "DK",
+  SHAMAN = "Sham",
+  MAGE = "Mage",
+  WARLOCK = "Lock",
+  DRUID = "Dru",
+}
+
+local SPEC_NAME = {
+  WARRIOR = { [1] = "Arms", [2] = "Fury", [3] = "Prot" },
+  PALADIN = { [1] = "Holy", [2] = "Prot", [3] = "Ret" },
+  HUNTER = { [1] = "Bm", [2] = "Mm", [3] = "Surv" },
+  ROGUE = { [1] = "Assa", [2] = "Combat", [3] = "Sub" },
+  PRIEST = { [1] = "Disc", [2] = "Holy", [3] = "Shadow" },
+  DEATHKNIGHT = { [2] = "Frost", [3] = "Unholy" },
+  SHAMAN = { [1] = "Elem", [2] = "Enh", [3] = "Restor" },
+  MAGE = { [1] = "Arcane", [2] = "Fire", [3] = "Frost" },
+  WARLOCK = { [1] = "Affli", [2] = "Demo", [3] = "Destro" },
+  DRUID = { [1] = "Balance", [3] = "Restor" },
+}
+
+local CLASS_ORDER = {
+  "WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST",
+  "DEATHKNIGHT", "SHAMAN", "MAGE", "WARLOCK", "DRUID",
+}
+
+local SPEC_KEY_ORDER = {
+  WARRIOR = { 1, 2, 3 },
+  PALADIN = { 1, 2, 3 },
+  HUNTER = { 1, 2, 3 },
+  ROGUE = { 1, 2, 3 },
+  PRIEST = { 1, 2, 3 },
+  DEATHKNIGHT = { 1, "blood_dps", 2, 3 },
+  SHAMAN = { 1, 2, 3 },
+  MAGE = { 1, 2, 3 },
+  WARLOCK = { 1, 2, 3 },
+  DRUID = { 1, "feral_tank", 2, 3 },
+}
+
+local BASE_ARMOR_LOC = {
+  INVTYPE_HEAD = true,
+  INVTYPE_SHOULDER = true,
+  INVTYPE_CHEST = true,
+  INVTYPE_ROBE = true,
+  INVTYPE_WAIST = true,
+  INVTYPE_LEGS = true,
+  INVTYPE_FEET = true,
+  INVTYPE_WRIST = true,
+  INVTYPE_HAND = true,
+  INVTYPE_CLOAK = true,
+  INVTYPE_SHIELD = true,
+}
+
+local BIS_R, BIS_G, BIS_B = 1, 0.82, 0
+local PRIO_R, PRIO_G, PRIO_B = 0.1, 1, 0.1
+local SPEC_LINE_H = 16
+local MAX_STAT_TRIES = 8
+
+local playerClass
+local playerSpecKeys = {}
+local specsReady = false
+local bisIndex
+local statsCacheLink
+local statsCache
+local statTries = 0
+local statAcc = 0
+
+local statWait = CreateFrame("Frame")
+statWait:Hide()
+
+local specHolder = CreateFrame("Frame", nil, frame)
+specHolder:SetWidth(480)
+specHolder:SetHeight(SPEC_LINE_H)
+specHolder:Hide()
+
+local specLineFS = {}
+for i = 1, 3 do
+  local fs = specHolder:CreateFontString(nil, "OVERLAY")
+  fs:SetFont(STANDARD_TEXT_FONT, 13, "OUTLINE")
+  fs:SetJustifyH("CENTER")
+  fs:SetWordWrap(false)
+  fs:SetWidth(480)
+  fs:Hide()
+  specLineFS[i] = fs
+end
+
+local bisOwnerFS = specHolder:CreateFontString(nil, "OVERLAY")
+bisOwnerFS:SetFont(STANDARD_TEXT_FONT, 11, "OUTLINE")
+bisOwnerFS:SetJustifyH("CENTER")
+bisOwnerFS:SetWordWrap(true)
+bisOwnerFS:SetTextColor(0.62, 0.62, 0.62)
+bisOwnerFS:Hide()
+
+local function HideSpecLines()
+  specHolder:Hide()
+  for i = 1, 3 do
+    specLineFS[i]:Hide()
+  end
+  bisOwnerFS:Hide()
+end
+
+local function ItemIdFromLink(link)
+  if type(link) ~= "string" then
+    return nil
+  end
+  return tonumber(link:match("item:(%d+)"))
+end
+
+local function EnsureBISIndex()
+  if bisIndex then
+    return
+  end
+  bisIndex = {}
+  if type(BidItemPopupBIS) ~= "table" then
+    return
+  end
+  for classToken, specs in pairs(BidItemPopupBIS) do
+    local byKey = {}
+    bisIndex[classToken] = byKey
+    for key, ids in pairs(specs) do
+      local set = {}
+      byKey[key] = set
+      if type(ids) == "table" then
+        for n = 1, #ids do
+          set[ids[n]] = true
+        end
+      end
+    end
+  end
+end
+
+local function IsSpecBIS(classToken, key, itemId)
+  EnsureBISIndex()
+  local byKey = bisIndex[classToken]
+  local set = byKey and byKey[key]
+  return set ~= nil and set[itemId] == true
+end
+
+local function HasBaseArmor(link)
+  local _, _, _, _, _, _, _, _, equipLoc = GetItemInfo(link)
+  return equipLoc ~= nil and BASE_ARMOR_LOC[equipLoc] == true
+end
+
+local function StatPositive(stats, key)
+  local value = stats and stats[key]
+  return type(value) == "number" and value > 0
+end
+
+local function SlotClosed(slot, stats, armor)
+  if type(slot) == "table" then
+    for n = 1, #slot do
+      local name = slot[n]
+      if name == "ARMOR" then
+        if armor then
+          return true
+        end
+      elseif StatPositive(stats, name) then
+        return true
+      end
+    end
+    return false
+  end
+  if slot == "ARMOR" then
+    return armor
+  end
+  return StatPositive(stats, slot)
+end
+
+local function IsSpecPrio(classToken, key, stats, armor)
+  local classTbl = BidItemPopupStats and BidItemPopupStats[classToken]
+  local slots = classTbl and classTbl[key]
+  if type(slots) ~= "table" or #slots < 3 then
+    return false
+  end
+  for n = 1, 3 do
+    if not SlotClosed(slots[n], stats, armor) then
+      return false
+    end
+  end
+  return true
+end
+
+local function KeysForTab(classToken, tab)
+  if classToken == "DEATHKNIGHT" and tab == 1 then
+    return { 1, "blood_dps" }
+  end
+  if classToken == "DRUID" and tab == 2 then
+    return { "feral_tank", 2 }
+  end
+  return { tab }
+end
+
+local function RefreshPlayerSpecs()
+  specsReady = true
+  playerSpecKeys = {}
+  local _, classToken = UnitClass("player")
+  playerClass = classToken
+  if not classToken or not GetTalentTabInfo or not GetNumTalentTabs then
+    return
+  end
+  local active = 1
+  if GetActiveTalentGroup then
+    active = GetActiveTalentGroup() or 1
+  end
+  local groups = { active }
+  if GetNumTalentGroups and GetNumTalentGroups() == 2 then
+    if active == 1 then
+      groups[2] = 2
+    else
+      groups[2] = 1
+    end
+  end
+  local seen = {}
+  local nTabs = GetNumTalentTabs() or 0
+  for g = 1, #groups do
+    local group = groups[g]
+    local bestTab = nil
+    local bestPts = -1
+    for tab = 1, nTabs do
+      local _, _, pts = GetTalentTabInfo(tab, false, false, group)
+      pts = pts or 0
+      if pts > bestPts then
+        bestPts = pts
+        bestTab = tab
+      end
+    end
+    if bestTab then
+      local keys = KeysForTab(classToken, bestTab)
+      for n = 1, #keys do
+        local key = keys[n]
+        if not seen[key] then
+          seen[key] = true
+          playerSpecKeys[#playerSpecKeys + 1] = key
+        end
+      end
+    end
+  end
+end
+
+local function SpecTag(classToken, key)
+  local short = CLASS_SHORT[classToken] or ""
+  if classToken == "DEATHKNIGHT" and key == 1 then
+    return "blood DK tank"
+  end
+  if classToken == "DEATHKNIGHT" and key == "blood_dps" then
+    return "blood DK"
+  end
+  if classToken == "DRUID" and key == "feral_tank" then
+    return "Dru bear"
+  end
+  if classToken == "DRUID" and key == 2 then
+    return "Dru cat"
+  end
+  local names = SPEC_NAME[classToken]
+  local spec = names and names[key] or ""
+  return spec .. " " .. short:lower()
+end
+
+local function SpecLineText(kind, classToken, key)
+  local body = kind .. " " .. SpecTag(classToken, key)
+  if kind == "BIS" then
+    return ">> " .. body .. " <<"
+  end
+  return "> " .. body .. " <"
+end
+
+local bisOwners
+
+local function EnsureBISOwners()
+  if bisOwners then
+    return
+  end
+  bisOwners = {}
+  if type(BidItemPopupBIS) ~= "table" then
+    return
+  end
+  local seen = {}
+  for ci = 1, #CLASS_ORDER do
+    local classToken = CLASS_ORDER[ci]
+    local specs = BidItemPopupBIS[classToken]
+    local keys = SPEC_KEY_ORDER[classToken]
+    if type(specs) == "table" and keys then
+      for ki = 1, #keys do
+        local key = keys[ki]
+        local ids = specs[key]
+        if type(ids) == "table" then
+          local tag = SpecTag(classToken, key)
+          local token = classToken .. ":" .. tostring(key)
+          for n = 1, #ids do
+            local id = ids[n]
+            local mark = seen[id]
+            if not mark then
+              mark = {}
+              seen[id] = mark
+            end
+            if not mark[token] then
+              mark[token] = true
+              local list = bisOwners[id]
+              if not list then
+                list = {}
+                bisOwners[id] = list
+              end
+              list[#list + 1] = { tag = tag, classToken = classToken }
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+local function BISOwnerLine(link)
+  local itemId = ItemIdFromLink(link)
+  if not itemId then
+    return nil
+  end
+  EnsureBISOwners()
+  local list = bisOwners[itemId]
+  if not list or #list == 0 then
+    return nil
+  end
+  local classes = {}
+  local classCount = 0
+  for i = 1, #list do
+    local classToken = list[i].classToken
+    if classToken and not classes[classToken] then
+      classes[classToken] = true
+      classCount = classCount + 1
+    end
+  end
+  if classCount < 2 then
+    return nil
+  end
+  local parts = {}
+  for i = 1, #list do
+    parts[#parts + 1] = list[i].tag
+  end
+  return "BIS: " .. table.concat(parts, ", ")
+end
+
+local function CurrentItemStats(link)
+  if statsCacheLink ~= link then
+    statsCacheLink = link
+    statsCache = nil
+    statTries = 0
+    statAcc = 0
+    statWait:Hide()
+  end
+  if statsCache then
+    return statsCache
+  end
+  local stats = BidItemPopup_ReadCanonicalStats(scanner, link)
+  if stats then
+    statsCache = stats
+    statWait:Hide()
+    return stats
+  end
+  if statTries < MAX_STAT_TRIES then
+    statWait:Show()
+  end
+  return nil
+end
+
+statWait:SetScript("OnUpdate", function(self, elapsed)
+  statAcc = statAcc + elapsed
+  if statAcc < 0.2 then
+    return
+  end
+  statAcc = 0
+  local link = statsCacheLink
+  if not link or statTries >= MAX_STAT_TRIES then
+    self:Hide()
+    return
+  end
+  statTries = statTries + 1
+  local stats = BidItemPopup_ReadCanonicalStats(scanner, link)
+  if stats then
+    statsCache = stats
+    self:Hide()
+    if frame:IsShown() then
+      RelayoutKeepTop()
+    end
+  elseif statTries >= MAX_STAT_TRIES then
+    self:Hide()
+  end
+end)
+
+local function SpecRowsForItem(link)
+  if not specsReady then
+    RefreshPlayerSpecs()
+  end
+  if not link or not playerClass then
+    return {}
+  end
+  if not CanPlayerUseItem(link) then
+    return {
+      {
+        text = "Can not be equipped",
+        r = 1,
+        g = 0.25,
+        b = 0.25,
+      },
+    }
+  end
+  local itemId = ItemIdFromLink(link)
+  if not itemId then
+    return {}
+  end
+  local stats = CurrentItemStats(link)
+  local armor = false
+  if stats then
+    armor = HasBaseArmor(link)
+  end
+  local rows = {}
+  for n = 1, #playerSpecKeys do
+    local key = playerSpecKeys[n]
+    local kind = nil
+    if IsSpecBIS(playerClass, key, itemId) then
+      kind = "BIS"
+    elseif stats and CanPlayerUseItem(link) and IsSpecPrio(playerClass, key, stats, armor) then
+      kind = "Prio"
+    end
+    if kind then
+      local r, g, b = PRIO_R, PRIO_G, PRIO_B
+      if kind == "BIS" then
+        r, g, b = BIS_R, BIS_G, BIS_B
+      end
+      rows[#rows + 1] = {
+        text = SpecLineText(kind, playerClass, key),
+        r = r,
+        g = g,
+        b = b,
+      }
+    end
+  end
+  return rows
+end
+
+local function PaintSpecLines(rows, anchor, relPoint, y)
+  local owner = BISOwnerLine(lastHref)
+  local n = rows and #rows or 0
+  if n == 0 and not owner then
+    HideSpecLines()
+    return 0
+  end
+  specHolder:SetFrameLevel(tip:GetFrameLevel() + 5)
+  specHolder:ClearAllPoints()
+  specHolder:SetPoint("TOP", anchor, relPoint, 0, y)
+  specHolder:Show()
+  for i = 1, 3 do
+    local fs = specLineFS[i]
+    local row = rows and rows[i]
+    if row then
+      fs:ClearAllPoints()
+      fs:SetPoint("TOP", specHolder, "TOP", 0, -(i - 1) * SPEC_LINE_H)
+      fs:SetText(row.text)
+      fs:SetTextColor(row.r, row.g, row.b)
+      fs:Show()
+    else
+      fs:Hide()
+    end
+  end
+  local used = n * SPEC_LINE_H
+  if owner then
+    local gap = n > 0 and 2 or 0
+    local width = MIN_WIDTH
+    if tip:IsShown() then
+      local tipW = (tip:GetWidth() or 0) + 24
+      if tipW > width then
+        width = tipW
+      end
+    elseif frame:GetWidth() and frame:GetWidth() > width then
+      width = frame:GetWidth()
+    end
+    bisOwnerFS:ClearAllPoints()
+    bisOwnerFS:SetWidth(width - 36)
+    bisOwnerFS:SetPoint("TOP", specHolder, "TOP", 0, -(used + gap))
+    bisOwnerFS:SetText(owner)
+    bisOwnerFS:Show()
+    local textH = bisOwnerFS:GetStringHeight() or 12
+    if textH < 12 then
+      textH = 12
+    end
+    used = used + gap + textH
+  else
+    bisOwnerFS:Hide()
+  end
+  specHolder:SetHeight(used)
+  return used
+end
+
+local function TipBoxHeight(t)
+  local h = t:GetHeight() or 0
+  if t:GetTop() and t:GetBottom() then
+    local boxH = t:GetTop() - t:GetBottom()
+    if boxH > h then
+      h = boxH
+    end
+  end
+  return h
+end
+
+local EQUIP_SLOTS = {
+  INVTYPE_HEAD = { "HeadSlot" },
+  INVTYPE_NECK = { "NeckSlot" },
+  INVTYPE_SHOULDER = { "ShoulderSlot" },
+  INVTYPE_CLOAK = { "BackSlot" },
+  INVTYPE_CHEST = { "ChestSlot" },
+  INVTYPE_ROBE = { "ChestSlot" },
+  INVTYPE_WRIST = { "WristSlot" },
+  INVTYPE_HAND = { "HandsSlot" },
+  INVTYPE_WAIST = { "WaistSlot" },
+  INVTYPE_LEGS = { "LegsSlot" },
+  INVTYPE_FEET = { "FeetSlot" },
+  INVTYPE_FINGER = { "Finger0Slot", "Finger1Slot" },
+  INVTYPE_TRINKET = { "Trinket0Slot", "Trinket1Slot" },
+  INVTYPE_WEAPON = { "MainHandSlot", "SecondaryHandSlot" },
+  INVTYPE_WEAPONMAINHAND = { "MainHandSlot" },
+  INVTYPE_WEAPONOFFHAND = { "SecondaryHandSlot" },
+  INVTYPE_2HWEAPON = { "MainHandSlot" },
+  INVTYPE_SHIELD = { "SecondaryHandSlot" },
+  INVTYPE_HOLDABLE = { "SecondaryHandSlot" },
+  INVTYPE_RANGED = { "RangedSlot" },
+  INVTYPE_RANGEDRIGHT = { "RangedSlot" },
+  INVTYPE_THROWN = { "RangedSlot" },
+  INVTYPE_RELIC = { "RangedSlot" },
+}
+
+local STAT_ORDER = {
+  "ARMOR",
+  "DPS",
+  "ITEM_MOD_STRENGTH_SHORT",
+  "ITEM_MOD_AGILITY_SHORT",
+  "ITEM_MOD_STAMINA_SHORT",
+  "ITEM_MOD_INTELLECT_SHORT",
+  "ITEM_MOD_SPIRIT_SHORT",
+  "ITEM_MOD_HEALTH_SHORT",
+  "ITEM_MOD_MANA_SHORT",
+  "ITEM_MOD_ATTACK_POWER_SHORT",
+  "ITEM_MOD_RANGED_ATTACK_POWER_SHORT",
+  "ITEM_MOD_SPELL_POWER_SHORT",
+  "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT",
+  "ITEM_MOD_SPELL_HEALING_DONE_SHORT",
+  "ITEM_MOD_HIT_RATING_SHORT",
+  "ITEM_MOD_HIT_MELEE_RATING_SHORT",
+  "ITEM_MOD_HIT_RANGED_RATING_SHORT",
+  "ITEM_MOD_HIT_SPELL_RATING_SHORT",
+  "ITEM_MOD_CRIT_RATING_SHORT",
+  "ITEM_MOD_CRIT_MELEE_RATING_SHORT",
+  "ITEM_MOD_CRIT_RANGED_RATING_SHORT",
+  "ITEM_MOD_CRIT_SPELL_RATING_SHORT",
+  "ITEM_MOD_HASTE_RATING_SHORT",
+  "ITEM_MOD_HASTE_MELEE_RATING_SHORT",
+  "ITEM_MOD_HASTE_RANGED_RATING_SHORT",
+  "ITEM_MOD_HASTE_SPELL_RATING_SHORT",
+  "ITEM_MOD_EXPERTISE_RATING_SHORT",
+  "ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT",
+  "ITEM_MOD_SPELL_PENETRATION_SHORT",
+  "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT",
+  "ITEM_MOD_DODGE_RATING_SHORT",
+  "ITEM_MOD_PARRY_RATING_SHORT",
+  "ITEM_MOD_BLOCK_RATING_SHORT",
+  "ITEM_MOD_BLOCK_VALUE_SHORT",
+  "ITEM_MOD_RESILIENCE_RATING_SHORT",
+  "ITEM_MOD_MANA_REGENERATION_SHORT",
+  "ITEM_MOD_HEALTH_REGENERATION_SHORT",
+  "ITEM_MOD_FIRE_RESISTANCE_SHORT",
+  "ITEM_MOD_NATURE_RESISTANCE_SHORT",
+  "ITEM_MOD_FROST_RESISTANCE_SHORT",
+  "ITEM_MOD_SHADOW_RESISTANCE_SHORT",
+  "ITEM_MOD_ARCANE_RESISTANCE_SHORT",
+}
+local STAT_RANK = {}
+for i = 1, #STAT_ORDER do
+  STAT_RANK[STAT_ORDER[i]] = i
+end
+
+local statMapCache = {}
+local statMapTries = {}
+local ARMOR_PATTERN
+local DPS_PATTERN
+
+local function PatternEscape(s)
+  return (s:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1"))
+end
+
+local function NumberCapture(fmt)
+  if type(fmt) ~= "string" then
+    return nil
+  end
+  local token = fmt:match("%%%.%d*f") or fmt:match("%%d")
+  if not token then
+    return nil
+  end
+  local startAt, endAt = fmt:find(token, 1, true)
+  if not startAt then
+    return nil
+  end
+  return PatternEscape(fmt:sub(1, startAt - 1)) .. "([%d%.,]+)" .. PatternEscape(fmt:sub(endAt + 1))
+end
+
+local function EnsureTipPatterns()
+  if not ARMOR_PATTERN and type(RESISTANCE0_NAME) == "string" then
+    ARMOR_PATTERN = "^(%d+)%s+" .. PatternEscape(RESISTANCE0_NAME) .. "%s*$"
+  end
+  if not DPS_PATTERN and type(DPS_TEMPLATE) == "string" then
+    DPS_PATTERN = NumberCapture(DPS_TEMPLATE)
+  end
+end
+
+local function FullItemLink(href)
+  if not href then
+    return nil
+  end
+  if href:find("|H", 1, true) then
+    return href
+  end
+  return "|H" .. href .. "|h[item]|h"
+end
+
+local function SafeGetItemInfo(link)
+  if type(link) == "number" then
+    return GetItemInfo(link)
+  end
+  if type(link) ~= "string" or link == "" then
+    return nil
+  end
+  local id = tonumber(link:match("item:(%d+)"))
+  if id then
+    return GetItemInfo(id)
+  end
+  local ok, name, itemLink, quality, ilvl, req, itemType, subType, stack, equipLoc, texture = pcall(GetItemInfo, link)
+  if not ok then
+    return nil
+  end
+  return name, itemLink, quality, ilvl, req, itemType, subType, stack, equipLoc, texture
+end
+
+local function NakedItemString(link)
+  local body = link and link:match("(item:[%-0-9:]+)")
+  if not body then
+    return link
+  end
+  local fields = { strsplit(":", body) }
+  if fields[3] then
+    fields[3] = "0"
+  end
+  if fields[4] then
+    fields[4] = "0"
+  end
+  if fields[5] then
+    fields[5] = "0"
+  end
+  if fields[6] then
+    fields[6] = "0"
+  end
+  if fields[7] then
+    fields[7] = "0"
+  end
+  return table.concat(fields, ":")
+end
+
+local function ParseTipNumber(text)
+  if not text then
+    return nil
+  end
+  text = text:gsub(",", ".")
+  return tonumber(text)
+end
+
+local function ReadArmorAndDps(link)
+  EnsureTipPatterns()
+  scanner:SetOwner(UIParent, "ANCHOR_NONE")
+  scanner:ClearLines()
+  scanner:SetHyperlink(link)
+  local armor, dps
+  local name = scanner:GetName()
+  for i = 2, scanner:NumLines() do
+    local fs = _G[name .. "TextLeft" .. i]
+    local text = fs and fs:GetText()
+    if text and text ~= "" then
+      text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+      if not armor and ARMOR_PATTERN then
+        armor = tonumber(text:match(ARMOR_PATTERN))
+      end
+      if not dps and DPS_PATTERN then
+        dps = ParseTipNumber(text:match(DPS_PATTERN))
+      end
+    end
+  end
+  scanner:Hide()
+  return armor, dps
+end
+
+local function StatMap(link)
+  if not link then
+    return {}
+  end
+  local naked = NakedItemString(link)
+  local cached = statMapCache[naked]
+  if cached then
+    return cached
+  end
+  SafeGetItemInfo(naked)
+  local okStats, stats = pcall(GetItemStats, naked)
+  if not okStats then
+    stats = nil
+  end
+  if not stats then
+    scanner:SetOwner(UIParent, "ANCHOR_NONE")
+    scanner:SetHyperlink(naked)
+    okStats, stats = pcall(GetItemStats, naked)
+    if not okStats then
+      stats = nil
+    end
+    scanner:Hide()
+  end
+  if not stats then
+    local tries = (statMapTries[naked] or 0) + 1
+    statMapTries[naked] = tries
+    if tries >= 4 then
+      statMapCache[naked] = {}
+    end
+    return {}
+  end
+  local map = {}
+  local armorFromStats
+  for key, value in pairs(stats) do
+    local armorKey = key == "ARMOR" or key == "RESISTANCE0_NAME" or key == "ITEM_MOD_ARMOR_SHORT"
+    if not armorKey and type(RESISTANCE0_NAME) == "string" then
+      armorKey = key == RESISTANCE0_NAME or _G[key] == RESISTANCE0_NAME
+    end
+    if armorKey then
+      if not armorFromStats then
+        armorFromStats = value
+      end
+    else
+      map[key] = value
+    end
+  end
+  local armor, dps = ReadArmorAndDps(naked)
+  if armor and armor > 0 then
+    map.ARMOR = armor
+  elseif armorFromStats and armorFromStats > 0 then
+    map.ARMOR = armorFromStats
+  end
+  if dps and dps > 0 then
+    map.DPS = dps
+  end
+  local _, _, _, _, _, _, _, _, equipLoc = SafeGetItemInfo(naked)
+  local tries = (statMapTries[naked] or 0) + 1
+  statMapTries[naked] = tries
+  if not (equipLoc and BASE_ARMOR_LOC[equipLoc] and not map.ARMOR and tries < 4) then
+    statMapCache[naked] = map
+  end
+  return map
+end
+
+local function DeltaAgainst(newMap, oldMap)
+  local delta = {}
+  local seen = {}
+  local function add(key)
+    if seen[key] then
+      return
+    end
+    seen[key] = true
+    local value = (newMap[key] or 0) - (oldMap[key] or 0)
+    if math.abs(value) >= 0.05 then
+      delta[key] = value
+    end
+  end
+  for key in pairs(newMap) do
+    add(key)
+  end
+  for key in pairs(oldMap) do
+    add(key)
+  end
+  return delta
+end
+
+local function OrderedDeltaKeys(columns)
+  local have = {}
+  for c = 1, #columns do
+    for key in pairs(columns[c]) do
+      have[key] = true
+    end
+  end
+  local keys = {}
+  for key in pairs(have) do
+    keys[#keys + 1] = key
+  end
+  table.sort(keys, function(a, b)
+    local ra = STAT_RANK[a] or 1000
+    local rb = STAT_RANK[b] or 1000
+    if ra ~= rb then
+      return ra < rb
+    end
+    return a < b
+  end)
+  return keys
+end
+
+local STAT_SHORT = {
+  ARMOR = "Armor",
+  ITEM_MOD_STRENGTH_SHORT = "Str",
+  ITEM_MOD_AGILITY_SHORT = "Agi",
+  ITEM_MOD_STAMINA_SHORT = "Stam",
+  ITEM_MOD_INTELLECT_SHORT = "Int",
+  ITEM_MOD_SPIRIT_SHORT = "Spi",
+  ITEM_MOD_HEALTH_SHORT = "Health",
+  ITEM_MOD_MANA_SHORT = "Mana",
+  ITEM_MOD_ATTACK_POWER_SHORT = "AP",
+  ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "RAP",
+  ITEM_MOD_SPELL_POWER_SHORT = "SP",
+  ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "Spell Dmg",
+  ITEM_MOD_SPELL_HEALING_DONE_SHORT = "Healing",
+  ITEM_MOD_HIT_RATING_SHORT = "Hit",
+  ITEM_MOD_HIT_MELEE_RATING_SHORT = "Melee Hit",
+  ITEM_MOD_HIT_RANGED_RATING_SHORT = "Ranged Hit",
+  ITEM_MOD_HIT_SPELL_RATING_SHORT = "Spell Hit",
+  ITEM_MOD_CRIT_RATING_SHORT = "Crit",
+  ITEM_MOD_CRIT_MELEE_RATING_SHORT = "Melee Crit",
+  ITEM_MOD_CRIT_RANGED_RATING_SHORT = "Ranged Crit",
+  ITEM_MOD_CRIT_SPELL_RATING_SHORT = "Spell Crit",
+  ITEM_MOD_HASTE_RATING_SHORT = "Haste",
+  ITEM_MOD_HASTE_MELEE_RATING_SHORT = "Melee Haste",
+  ITEM_MOD_HASTE_RANGED_RATING_SHORT = "Ranged Haste",
+  ITEM_MOD_HASTE_SPELL_RATING_SHORT = "Spell Haste",
+  ITEM_MOD_EXPERTISE_RATING_SHORT = "Exp",
+  ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT = "ArP",
+  ITEM_MOD_SPELL_PENETRATION_SHORT = "Spell Pen",
+  ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "Def",
+  ITEM_MOD_DODGE_RATING_SHORT = "Dodge",
+  ITEM_MOD_PARRY_RATING_SHORT = "Parry",
+  ITEM_MOD_BLOCK_RATING_SHORT = "Block",
+  ITEM_MOD_BLOCK_VALUE_SHORT = "BV",
+  ITEM_MOD_RESILIENCE_RATING_SHORT = "Resil",
+  ITEM_MOD_MANA_REGENERATION_SHORT = "Mp5",
+  ITEM_MOD_HEALTH_REGENERATION_SHORT = "Hp5",
+  ITEM_MOD_FIRE_RESISTANCE_SHORT = "Fire",
+  ITEM_MOD_NATURE_RESISTANCE_SHORT = "Nature",
+  ITEM_MOD_FROST_RESISTANCE_SHORT = "Frost",
+  ITEM_MOD_SHADOW_RESISTANCE_SHORT = "Shadow",
+  ITEM_MOD_ARCANE_RESISTANCE_SHORT = "Arcane",
+  EMPTY_SOCKET_META = "Meta",
+  EMPTY_SOCKET_RED = "Red",
+  EMPTY_SOCKET_YELLOW = "Yellow",
+  EMPTY_SOCKET_BLUE = "Blue",
+  EMPTY_SOCKET_NO_COLOR = "Prism",
+  EMPTY_SOCKET_PRISMATIC = "Prism",
+}
+
+local SOCKET_ICON = {
+  EMPTY_SOCKET_META = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Meta",
+  EMPTY_SOCKET_RED = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Red",
+  EMPTY_SOCKET_YELLOW = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Yellow",
+  EMPTY_SOCKET_BLUE = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Blue",
+  EMPTY_SOCKET_NO_COLOR = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Prismatic",
+  EMPTY_SOCKET_PRISMATIC = "Interface\\ItemSocketingFrame\\UI-EmptySocket-Prismatic",
+}
+
+local function DeltaText(delta, key, short)
+  if not delta or math.abs(delta) < 0.05 then
+    return nil
+  end
+  local label
+  if short and STAT_SHORT[key] then
+    label = STAT_SHORT[key]
+  elseif key == "ARMOR" then
+    label = RESISTANCE0_NAME or "Armor"
+  elseif key == "DPS" then
+    label = "DPS"
+  else
+    label = _G[key] or key
+  end
+  local icon = SOCKET_ICON[key]
+  if icon then
+    label = "|T" .. icon .. ":14|t " .. label
+  end
+  local shown
+  if key == "DPS" then
+    shown = string.format("%.1f", delta)
+  else
+    if delta > 0 then
+      shown = tostring(math.floor(delta + 0.5))
+    else
+      shown = tostring(math.ceil(delta - 0.5))
+    end
+  end
+  if delta > 0 and shown:sub(1, 1) ~= "+" then
+    shown = "+" .. shown
+  end
+  local r, g, b = 1, 0, 0
+  if delta > 0 then
+    r, g, b = 0, 1, 0
+  end
+  return shown .. " " .. label, r, g, b
+end
+
+local function ItemIdentity(link)
+  if type(link) ~= "string" then
+    return nil
+  end
+  local body = link:match("item:[%-0-9:]+")
+  if not body then
+    return nil
+  end
+  local fields = {strsplit(":", body)}
+  local id = fields[2]
+  if not id or id == "" then
+    return nil
+  end
+  local suffix = fields[8]
+  if not suffix or suffix == "" then
+    suffix = "0"
+  end
+  local parts = {id, suffix}
+  for i = 11, #fields do
+    local value = fields[i]
+    if value and value ~= "" and value ~= "0" then
+      parts[#parts + 1] = value
+    end
+  end
+  return table.concat(parts, ":")
+end
+
+local function FilledSlotLinks(equipLoc)
+  local slots = equipLoc and EQUIP_SLOTS[equipLoc]
+  local links = {}
+  if not slots then
+    return links
+  end
+  for i = 1, #slots do
+    local slotId = GetInventorySlotInfo(slots[i])
+    local equipped = slotId and GetInventoryItemLink("player", slotId)
+    if equipped then
+      links[#links + 1] = equipped
+    end
+  end
+  return links
+end
+
+local function RefreshCompareSlots()
+  if cmp.checkedHref ~= lastHref then
+    cmp.checkedHref = lastHref
+    cmp.on = false
+    cmp.known = false
+    cmp.slots = 0
+  end
+  if cmp.known then
+    return cmp.slots
+  end
+  local name, _, _, _, _, _, _, _, equipLoc = SafeGetItemInfo(lastHref)
+  if not name then
+    return 0
+  end
+  cmp.known = true
+  local links = FilledSlotLinks(equipLoc)
+  local want = ItemIdentity(lastHref)
+  cmp.slots = 0
+  for i = 1, #links do
+    if ItemIdentity(links[i]) ~= want then
+      cmp.slots = #links
+      break
+    end
+  end
+  return cmp.slots
+end
+
+cmp.name = tip:CreateFontString(nil, "OVERLAY", "GameTooltipHeaderText")
+cmp.name:SetJustifyH("LEFT")
+cmp.name:Hide()
+
+cmp.vs = tip:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+cmp.vs:SetJustifyH("LEFT")
+cmp.vs:SetWordWrap(false)
+cmp.vs:SetText("vs")
+cmp.vs:SetTextColor(1, 1, 1)
+cmp.vs:Hide()
+
+cmp.equip = tip:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+cmp.equip:SetJustifyH("LEFT")
+cmp.equip:SetWordWrap(false)
+cmp.equip:Hide()
+
+cmp.equipRight = tip:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+cmp.equipRight:SetJustifyH("RIGHT")
+cmp.equipRight:SetWordWrap(false)
+cmp.equipRight:Hide()
+
+local function CompareRow(i)
+  local row = cmp.rows[i]
+  if row then
+    return row
+  end
+  row = {}
+  row.left = tip:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+  row.left:SetJustifyH("LEFT")
+  row.left:SetWordWrap(false)
+  row.right = tip:CreateFontString(nil, "OVERLAY", "GameTooltipText")
+  row.right:SetJustifyH("RIGHT")
+  row.right:SetWordWrap(false)
+  cmp.rows[i] = row
+  return row
+end
+
+cmp.iconGuard = CreateFrame("Frame")
+cmp.iconGuard:Hide()
+cmp.iconGuard:SetScript("OnUpdate", function()
+  if cmp.on and tip:IsShown() then
+    SetExtraIconsShown(false)
+  end
+end)
+
+local ApplyTipMode
+
+function HideCompareOverlay()
+  cmp.iconGuard:Hide()
+  cmp.name:Hide()
+  cmp.vs:Hide()
+  cmp.equip:Hide()
+  cmp.equipRight:Hide()
+  for i = 1, #cmp.rows do
+    cmp.rows[i].left:Hide()
+    cmp.rows[i].right:Hide()
+  end
+  if cmp.pad > 0 and lastHref then
+    cmp.pad = 0
+    cmp.shownHref = nil
+    ApplyTipMode()
+  end
+end
+
+local function StripInlineTextures(text)
+  if not text then
+    return ""
+  end
+  text = text:gsub("\124", "|")
+  return (text:gsub("|T.-|t", ""))
+end
+
+function SetExtraIconsShown(show)
+  for i = 1, 10 do
+    local tex = _G["BidItemPopupTipTexture" .. i]
+    if tex then
+      if show then
+        if tex.bidSaved ~= nil then
+          tex:SetTexture(tex.bidSaved)
+          tex.bidSaved = nil
+        end
+        tex:SetAlpha(1)
+        if tex.bidWasShown then
+          tex:Show()
+        end
+        tex.bidWasShown = nil
+      else
+        if tex.bidWasShown == nil then
+          tex.bidWasShown = tex:IsShown() and true or false
+        end
+        if tex.bidSaved == nil then
+          local path = tex:GetTexture()
+          if path then
+            tex.bidSaved = path
+          end
+        end
+        tex:SetAlpha(0)
+        tex:Hide()
+      end
+    end
+  end
+end
+
+local function RememberLine(fs)
+  if fs and cmp.lineText[fs] == nil then
+    cmp.lineText[fs] = fs:GetText()
+  end
+end
+
+function SetTipLinesAlpha(alpha)
+  local n = tip:NumLines() or 0
+  if alpha < 1 then
+    for i = 1, n do
+      local left = _G["BidItemPopupTipTextLeft" .. i]
+      local right = _G["BidItemPopupTipTextRight" .. i]
+      if left then
+        RememberLine(left)
+        left:SetText(StripInlineTextures(cmp.lineText[left]))
+        left:SetAlpha(0)
+      end
+      if right then
+        RememberLine(right)
+        right:SetText(StripInlineTextures(cmp.lineText[right]))
+        right:SetAlpha(0)
+      end
+    end
+    SetExtraIconsShown(false)
+    return
+  end
+  for fs, text in pairs(cmp.lineText) do
+    fs:SetText(text)
+    fs:SetAlpha(1)
+  end
+  for fs in pairs(cmp.lineText) do
+    cmp.lineText[fs] = nil
+  end
+  for i = 1, n do
+    local left = _G["BidItemPopupTipTextLeft" .. i]
+    local right = _G["BidItemPopupTipTextRight" .. i]
+    if left then
+      left:SetAlpha(1)
+    end
+    if right then
+      right:SetAlpha(1)
+    end
+  end
+  SetExtraIconsShown(true)
+end
+
+local function CompareColumns()
+  local link = FullItemLink(lastHref)
+  local _, _, _, _, _, _, _, _, equipLoc = SafeGetItemInfo(link)
+  local newMap = StatMap(link)
+  local columns = {}
+  local equippedLinks = FilledSlotLinks(equipLoc)
+  for i = 1, #equippedLinks do
+    columns[i] = DeltaAgainst(newMap, StatMap(equippedLinks[i]))
+  end
+  return columns, OrderedDeltaKeys(columns), equippedLinks
+end
+
+local function EnsureComparePad()
+  if cmp.pad >= 2 then
+    return
+  end
+  while cmp.pad < 2 do
+    tip:AddLine(" ")
+    cmp.pad = cmp.pad + 1
+  end
+end
+
+local function EquipTitle(link)
+  if not link then
+    return "empty", 0.55, 0.55, 0.55
+  end
+  local name, _, quality = SafeGetItemInfo(link)
+  if not name or name == "" then
+    return "empty", 0.55, 0.55, 0.55
+  end
+  local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality or 1]
+  if color then
+    return name, color.r, color.g, color.b
+  end
+  return name, 1, 1, 1
+end
+
+local function PlaceOnTipLine(fs, lineIndex, x, rowWidth)
+  local anchor = _G["BidItemPopupTipTextLeft" .. lineIndex]
+  fs:ClearAllPoints()
+  if anchor then
+    fs:SetFontObject(anchor:GetFontObject() or GameTooltipText)
+    fs:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, 0)
+  else
+    fs:SetFontObject(GameTooltipText)
+    fs:SetPoint("TOPLEFT", cmp.name, "BOTTOMLEFT", x, -2 - (lineIndex - 2) * 16)
+  end
+  fs:SetWidth(rowWidth)
+end
+
+function PaintCompareOverlay()
+  EnsureComparePad()
+  SetTipLinesAlpha(0)
+  cmp.iconGuard:Show()
+  local name = lastItemName or ""
+  local quality = lastItemQuality or 1
+  local infoName, _, infoQ = SafeGetItemInfo(lastHref)
+  if infoName then
+    name = infoName
+    quality = infoQ or quality
+  end
+  cmp.name:SetText(name)
+  local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+  if color then
+    cmp.name:SetTextColor(color.r, color.g, color.b)
+  else
+    cmp.name:SetTextColor(1, 1, 1)
+  end
+  cmp.name:ClearAllPoints()
+  local header = _G["BidItemPopupTipTextLeft1"]
+  if header then
+    cmp.name:SetFontObject(header:GetFontObject() or GameTooltipHeaderText)
+    cmp.name:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
+    cmp.name:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+  else
+    cmp.name:SetPoint("TOPLEFT", tip, "TOPLEFT", 8, -10)
+    cmp.name:SetPoint("TOPRIGHT", tip, "TOPRIGHT", -28, -10)
+  end
+  cmp.name:Show()
+  local columns, keys, equippedLinks = CompareColumns()
+  local two = #columns >= 2
+  local lineH = 16
+  local width = (tip:GetWidth() or 200) - 16
+  PlaceOnTipLine(cmp.vs, 2, 0, width)
+  cmp.vs:SetText("vs")
+  cmp.vs:SetTextColor(1, 1, 1)
+  cmp.vs:Show()
+  local leftName, lr, lg, lb = EquipTitle(equippedLinks and equippedLinks[1])
+  PlaceOnTipLine(cmp.equip, 3, 0, two and (width / 2 - 4) or width)
+  cmp.equip:SetJustifyH("LEFT")
+  cmp.equip:SetText(leftName)
+  cmp.equip:SetTextColor(lr, lg, lb)
+  cmp.equip:Show()
+  if two then
+    local rightName, rr, rg, rb = EquipTitle(equippedLinks and equippedLinks[2])
+    PlaceOnTipLine(cmp.equipRight, 3, width / 2, width / 2 - 4)
+    cmp.equipRight:SetJustifyH("RIGHT")
+    cmp.equipRight:SetText(rightName)
+    cmp.equipRight:SetTextColor(rr, rg, rb)
+    cmp.equipRight:Show()
+  else
+    cmp.equipRight:Hide()
+  end
+  for i = 1, #cmp.rows do
+    cmp.rows[i].left:Hide()
+    cmp.rows[i].right:Hide()
+  end
+  for i = 1, #keys do
+    local row = CompareRow(i)
+    local key = keys[i]
+    local y = 10 + (#keys - i) * lineH
+    local left, lr, lg, lb = DeltaText(columns[1] and columns[1][key], key, two)
+    row.left:ClearAllPoints()
+    row.left:SetPoint("BOTTOMLEFT", tip, "BOTTOMLEFT", 8, y)
+    row.left:SetWidth(two and (width / 2 - 4) or width)
+    row.left:SetText(left or "")
+    if left then
+      row.left:SetTextColor(lr, lg, lb)
+    end
+    row.left:Show()
+    if two then
+      local right, rr, rg, rb = DeltaText(columns[2] and columns[2][key], key, true)
+      row.right:ClearAllPoints()
+      row.right:SetPoint("BOTTOMRIGHT", tip, "BOTTOMRIGHT", -8, y)
+      row.right:SetWidth(width / 2 - 4)
+      row.right:SetText(right or "")
+      if right then
+        row.right:SetTextColor(rr, rg, rb)
+      end
+      row.right:Show()
+    end
+  end
+end
+
+ApplyTipMode = function()
+  if not lastHref then
+    return
+  end
+  if cmp.shownHref == lastHref and tip:IsShown() then
+    return
+  end
+  cmp.pad = 0
+  tip:SetOwner(frame, "ANCHOR_NONE")
+  tip:SetHyperlink(lastHref)
+  cmp.shownHref = lastHref
+  for i = 1, 10 do
+    local tex = _G["BidItemPopupTipTexture" .. i]
+    if tex then
+      tex.bidSaved = nil
+      tex.bidWasShown = nil
+      tex:SetAlpha(1)
+    end
+  end
+  HideCompareOverlay()
+  for fs in pairs(cmp.lineText) do
+    cmp.lineText[fs] = nil
+  end
+end
+
+local function PlaceTip()
+  tip:ClearAllPoints()
+  tip:SetPoint("TOP", frame, "TOP", 0, -TITLE_H)
+end
+
+local function PlaceCompareExtras()
+  if compareBtn:IsShown() then
+    compareBtn:ClearAllPoints()
+    compareBtn:SetPoint("TOP", tip, "BOTTOM", 0, -4)
+  end
+end
+
+local function CompareStackHeight()
+  return TipBoxHeight(tip)
+end
+
+local tipFix = CreateFrame("Frame")
+tipFix:Hide()
+tipFix:SetScript("OnUpdate", function(self)
+  self:Hide()
+  if not frame:IsShown() or uiMinimized or itemHidden or not tip:IsShown() then
+    return
+  end
+  if not cmp.known and lastHref and SafeGetItemInfo(lastHref) then
+    RelayoutKeepTop()
+    return
+  end
+  if cmp.on and lastHref then
+    local naked = NakedItemString(FullItemLink(lastHref))
+    if naked and not statMapCache[naked] then
+      RelayoutKeepTop()
+      return
+    end
+  end
+  local h = CompareStackHeight()
+  if h > 1 and math.abs(h - cmp.laidTipH) > 2 then
+    RelayoutKeepTop()
+  end
+end)
+
+local function LayoutToken()
+  local plusOn = currentBid and 1 or 0
+  local tenOn = (not myOwnBid or myOwnBid <= 10) and 1 or 0
+  return table.concat({
+    tostring(#CollectVisibleBids()),
+    itemHidden and "1" or "0",
+    cmp.on and "1" or "0",
+    tostring(cmp.slots or 0),
+    uiMinimized and "1" or "0",
+    tostring(plusOn),
+    tostring(tenOn),
+    HasTossPaid() and "1" or "0",
+    lastHref or "",
+  }, "\0")
+end
+
+local function NoteLayout()
+  cmp.appliedLayout = LayoutToken()
 end
 
 local function Layout()
@@ -895,6 +2135,9 @@ local function Layout()
   if uiMinimized then
     title:Hide()
     tip:Hide()
+    cmp.shownHref = nil
+    HideCompareOverlay()
+    compareBtn:Hide()
     hideTipBtn:Hide()
     showItemBtn:Hide()
     closeBtn:Hide()
@@ -910,6 +2153,7 @@ local function Layout()
     minBtn:ClearAllPoints()
     quietCloseBtn:Show()
     minBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -2)
+    HideSpecLines()
     if lastItemName then
       itemNameText:SetText(lastItemName)
       local q = lastItemQuality or 1
@@ -933,6 +2177,7 @@ local function Layout()
     end
     frame:SetWidth(compactW)
     frame:SetHeight(44)
+    NoteLayout()
     return
   end
 
@@ -954,15 +2199,57 @@ local function Layout()
   minBtn:SetNormalTexture("Interface\\Buttons\\UI-MinusButton-UP")
   minBtn:SetPushedTexture("Interface\\Buttons\\UI-MinusButton-DOWN")
   if not itemHidden then
-      if lastHref then
-        tip:SetOwner(frame, "ANCHOR_NONE")
-        tip:SetHyperlink(lastHref)
+      RefreshCompareSlots()
+      local keepTip = tip:IsShown()
+        and cmp.shownHref == lastHref
+        and cmp.stackH and cmp.stackH > 1
+        and cmp.paintedOn == (cmp.on and true or false)
+      if keepTip and cmp.on and lastHref then
+        local naked = NakedItemString(FullItemLink(lastHref))
+        if naked and not statMapCache[naked] then
+          keepTip = false
+        end
       end
-      tip:ClearAllPoints()
-      tip:SetPoint("TOP", frame, "TOP", 0, -TITLE_H)
-      tip:Show()
-      tw = tip:GetWidth() or 200
-      th = tip:GetHeight() or 80
+      if keepTip then
+        tw = tip:GetWidth() or 200
+        th = cmp.stackH
+      else
+        ApplyTipMode()
+        tip:ClearAllPoints()
+        tip:SetPoint("TOP", frame, "TOP", 0, -TITLE_H)
+        tip:Show()
+        if cmp.on and cmp.slots > 0 then
+          PaintCompareOverlay()
+        else
+          HideCompareOverlay()
+          SetTipLinesAlpha(1)
+        end
+        if cmp.slots > 0 then
+          compareBtn:SetText(cmp.on and "item" or "compare")
+          compareBtn:Show()
+        else
+          compareBtn:Hide()
+        end
+        tw = tip:GetWidth() or 200
+        th = CompareStackHeight()
+        PlaceTip()
+        PlaceCompareExtras()
+        if compareBtn:IsShown() then
+          th = th + 4 + compareBtn:GetHeight()
+        end
+        local specAnchor = tip
+        if compareBtn:IsShown() then
+          specAnchor = compareBtn
+        end
+        local specH = PaintSpecLines(SpecRowsForItem(lastHref), specAnchor, "BOTTOM", -4)
+        if specH > 0 then
+          th = th + 4 + specH
+        end
+        cmp.laidTipH = CompareStackHeight()
+        cmp.stackH = th
+        cmp.paintedOn = cmp.on and true or false
+        tipFix:Show()
+      end
       itemNameText:Hide()
       hideTipBtn:Show()
       showItemBtn:Hide()
@@ -982,11 +2269,20 @@ local function Layout()
         itemNameText:Hide()
       end
       tip:Hide()
+      cmp.shownHref = nil
+      cmp.stackH = nil
+      cmp.paintedOn = nil
+      HideCompareOverlay()
+      compareBtn:Hide()
       hideTipBtn:Hide()
       showItemBtn:Show()
       showItemBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -52, -10)
       if frame:GetWidth() and frame:GetWidth() > 1 then
         tw = frame:GetWidth() - 24
+      end
+      local specH = PaintSpecLines(SpecRowsForItem(lastHref), itemNameText, "BOTTOM", -2)
+      if specH > 0 then
+        th = th + 2 + specH
       end
     end
   local width = tw + 24
@@ -1006,8 +2302,8 @@ local function Layout()
   local footerH = ROW_H + ROW_H + PAD + listH + 8 + tossSpace
   frame:SetWidth(width)
   frame:SetHeight(headerH + th + footerH)
-  tip:ClearAllPoints()
-  tip:SetPoint("TOP", frame, "TOP", 0, -TITLE_H)
+  PlaceTip()
+  PlaceCompareExtras()
 
   minBtn:ClearAllPoints()
   minBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -2)
@@ -1026,7 +2322,7 @@ local function Layout()
   if not rowW or rowW < 1 then
     rowW = width - 32
   end
-  local total = (#PLUS_AMOUNTS * PLUS_W) + ((#PLUS_AMOUNTS - 1) * PLUS_GAP)
+  local total = (#plusButtons * PLUS_W) + ((#plusButtons - 1) * PLUS_GAP)
   local x = (rowW - total) / 2
   for i, btn in ipairs(plusButtons) do
     btn:ClearAllPoints()
@@ -1057,6 +2353,7 @@ local function Layout()
 
   tossBtn:ClearAllPoints()
   tossBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
+  NoteLayout()
 end
 
 function RelayoutKeepTop()
@@ -1084,6 +2381,10 @@ showItemBtn:SetScript("OnClick", function()
   if lastHref then
     tip:SetOwner(frame, "ANCHOR_NONE")
     tip:SetHyperlink(lastHref)
+    cmp.shownHref = lastHref
+    cmp.stackH = nil
+    cmp.paintedOn = nil
+    tip:Show()
   end
   RelayoutKeepTop()
 end)
@@ -1100,6 +2401,14 @@ function UpdateBidUI()
   if currentBid then
     for _, btn in ipairs(plusButtons) do
       btn:Show()
+    end
+    if roundBtn then
+      local up = RoundBidPlace(currentBid)
+      if up > currentBid then
+        roundBtn:Enable()
+      else
+        roundBtn:Disable()
+      end
     end
   else
     for _, btn in ipairs(plusButtons) do
@@ -1119,12 +2428,14 @@ function UpdateBidUI()
     local row = EnsureListRow(i)
     local withdrawn = info and info.withdrawn
     local isLead = info and not withdrawn and currentBidder == name
-    row.nameFS:SetFont(STANDARD_TEXT_FONT, LIST_FONT, "OUTLINE")
-    row.netFS:SetFont(STANDARD_TEXT_FONT, LIST_FONT, "OUTLINE")
     if isLead then
-      row.bidFS:SetFont(STANDARD_TEXT_FONT, LIST_FONT_LEAD, "OUTLINE")
-    else
+      if not row.leadFont then
+        row.bidFS:SetFont(STANDARD_TEXT_FONT, LIST_FONT_LEAD, "OUTLINE")
+        row.leadFont = true
+      end
+    elseif row.leadFont then
       row.bidFS:SetFont(STANDARD_TEXT_FONT, LIST_FONT, "OUTLINE")
+      row.leadFont = false
     end
     row.nameFS:SetText(name)
     local r, g, b = ClassColor(info.classFile)
@@ -1153,13 +2464,19 @@ function UpdateBidUI()
         row.strike:Show()
       end
     else
-      row.bidFS:SetTextColor(1, 1, 0.15)
+      if isLead then
+        row.bidFS:SetTextColor(0.2, 1, 0.25)
+      else
+        row.bidFS:SetTextColor(1, 1, 0.15)
+      end
       if row.strike then
         row.strike:Hide()
       end
     end
   end
-  RelayoutKeepTop()
+  if frame:IsShown() and LayoutToken() ~= cmp.appliedLayout then
+    RelayoutKeepTop()
+  end
 end
 
 function BidItemPopup_ApplySettings()
@@ -1180,7 +2497,6 @@ local function ResetAuction()
   if GuildRoster then
     GuildRoster()
   end
-  UpdateBidUI()
 end
 
 local function WithdrawBid(sender)
@@ -1270,12 +2586,38 @@ for i, inc in ipairs(PLUS_AMOUNTS) do
   plusButtons[i] = btn
 end
 
-local function ShowItemWindow(href, full)
+roundBtn = CreateFrame("Button", nil, plusRow, "UIPanelButtonTemplate")
+roundBtn:SetWidth(PLUS_W)
+roundBtn:SetHeight(BTN_H)
+roundBtn:SetText("round")
+roundBtn:Disable()
+roundBtn:SetScript("OnClick", function()
+  if not currentBid then
+    return
+  end
+  local nextBid = RoundBidPlace(currentBid)
+  if nextBid <= currentBid then
+    return
+  end
+  local net = GetGuildNetAndClass(UnitName("player"))
+  if net and nextBid > net then
+    return
+  end
+  iHaveBid = true
+  myOwnBid = nextBid
+  SendRaid(tostring(nextBid))
+  quietCloseBtn:Show()
+  UpdateBidUI()
+end)
+roundBtn:Hide()
+plusButtons[#plusButtons + 1] = roundBtn
+
+local function ShowItemWindow(href, full, force)
   if not href then
     return false
   end
   local itemLink = full or ("|H" .. href .. "|h[item]|h")
-  if not CanPlayerUseItem(itemLink) then
+  if not force and not ShowAllBids() and not CanPlayerUseItem(itemLink) then
     return false
   end
 
@@ -1284,17 +2626,21 @@ local function ShowItemWindow(href, full)
   lastHref = href
   lastItemName = nil
   lastItemQuality = nil
-  local iname, _, iquality = GetItemInfo(itemLink)
+  local iname, _, iquality = SafeGetItemInfo(itemLink)
   if iname then
     lastItemName = iname
     lastItemQuality = iquality
   end
   itemHidden = false
+  cmp.on = false
+  cmp.stackH = nil
+  cmp.paintedOn = nil
   uiMinimized = false
   frame:Show()
   RestorePosition(frame)
   tip:SetOwner(frame, "ANCHOR_NONE")
   tip:SetHyperlink(href)
+  cmp.shownHref = href
   tip:Show()
   if not lastItemName then
     local line = _G["BidItemPopupTipTextLeft1"]
@@ -1361,15 +2707,35 @@ function StartCloseTimer(sec)
 end
 
 local function ExtractItemLink(msg)
-  local full = msg:match("|c%x+|Hitem:.-|h%[.-%]|h|r")
-  if not full then
-    full = msg:match("|Hitem:.-|h%[.-%]|h")
-  end
-  if not full then
+  if type(msg) ~= "string" or msg == "" then
     return nil, nil
   end
-  local href = full:match("|H(item:[^|]+)|h")
-  return href, full
+  msg = msg:gsub("\124", "|")
+  local full = msg:match("|c%x+|Hitem:[^|]+|h%[[^%]]+%]|h|r")
+  if not full then
+    full = msg:match("|Hitem:[^|]+|h%[[^%]]+%]|h")
+  end
+  if full then
+    local href = full:match("|H(item:[^|]+)|h")
+    if href then
+      return href, full
+    end
+  end
+  local body = msg:match("(item:%d[%-0-9:]*)")
+  if body then
+    return body, "|H" .. body .. "|h[item]|h"
+  end
+  local plain = msg:match("%[(.-)%]")
+  if plain and plain ~= "" then
+    local _, link = GetItemInfo(plain)
+    if link then
+      local href = link:match("item:[^|]+")
+      if href then
+        return href, link
+      end
+    end
+  end
+  return nil, nil
 end
 
 local eventFrame = CreateFrame("Frame")
@@ -1383,6 +2749,7 @@ eventFrame:RegisterEvent("TRADE_CLOSED")
 eventFrame:RegisterEvent("TRADE_UPDATE")
 eventFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
 eventFrame:RegisterEvent("PLAYER_MONEY")
+eventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
 eventFrame:RegisterEvent("MAIL_SEND_SUCCESS")
 eventFrame:RegisterEvent("MAIL_FAILED")
 eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
@@ -1390,8 +2757,8 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
     if arg1 == ADDON then
       BidItemPopupDB = BidItemPopupDB or {}
       BidItemPopupDB.tossPaid = BidItemPopupDB.tossPaid or {}
-      if BidItemPopupDB.showAllBids == nil then
-        BidItemPopupDB.showAllBids = false
+      if BidItemPopupDB.showCannotEquip == nil then
+        BidItemPopupDB.showCannotEquip = false
       end
       if BidItemPopupDB.playOutbidSound == nil then
         BidItemPopupDB.playOutbidSound = true
@@ -1402,6 +2769,14 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
       if GuildRoster then
         GuildRoster()
       end
+      RefreshPlayerSpecs()
+    end
+    return
+  end
+  if event == "PLAYER_TALENT_UPDATE" then
+    RefreshPlayerSpecs()
+    if frame:IsShown() then
+      RelayoutKeepTop()
     end
     return
   end
@@ -1415,6 +2790,7 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
     bothAccepted = false
     tradeMoneyAtShow = GetMoney() or 0
     SnapshotTrade()
+    partnerPollAcc = 0
     partnerPoll:Show()
     if pendingTradeGold then
       PutTradeGold()
@@ -1467,16 +2843,26 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
     return
   end
   if event == "GUILD_ROSTER_UPDATE" then
+    RebuildGuildCache()
     if frame:IsShown() and #bidOrder > 0 then
+      local changed = false
       for _, name in ipairs(bidOrder) do
         local info = bidByName[name]
         if info then
           local net, classFile = GetGuildNetAndClass(name)
-          info.net = net or info.net
-          info.classFile = info.classFile or classFile
+          if net ~= nil and net ~= info.net then
+            info.net = net
+            changed = true
+          end
+          if info.classFile == nil and classFile ~= nil then
+            info.classFile = classFile
+            changed = true
+          end
         end
       end
-      UpdateBidUI()
+      if changed then
+        UpdateBidUI()
+      end
     end
     return
   end
@@ -1515,13 +2901,10 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2)
   end
 end)
 
-SLASH_BIDITEMPOPUP1 = "/biditem"
-SlashCmdList.BIDITEMPOPUP = function(msg)
-  msg = msg and msg:gsub("^%s+", ""):gsub("%s+$", "")
+local function HandleBidItemCommand(msg)
+  msg = msg and msg:gsub("^%s+", ""):gsub("%s+$", "") or ""
   if msg == "" then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00" .. ADDON .. "|r: окно бида. Перетащи мышкой — позиция запомнится.")
-    DEFAULT_CHAT_FRAME:AddMessage("Настройки: /biditem options")
-    DEFAULT_CHAT_FRAME:AddMessage("Проверка: /biditem и Shift-клик по вещи")
+    DEFAULT_CHAT_FRAME:AddMessage("|cff00ff00" .. ADDON .. "|r: /biditem, Shift-клик по вещи в эту строку, Enter.")
     return
   end
   if msg == "options" or msg == "opt" or msg == "config" then
@@ -1532,13 +2915,16 @@ SlashCmdList.BIDITEMPOPUP = function(msg)
   end
   local href, full = ExtractItemLink(msg)
   if not href then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000" .. ADDON .. "|r: нет ссылки на предмет. Shift-клик по вещи после /biditem")
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000" .. ADDON .. "|r: не вижу предмет. Shift-клик по вещи в строку /biditem.")
     return
   end
-  if not ShowItemWindow(href, full) then
-    DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00" .. ADDON .. "|r: этот предмет твой класс не может надеть — окно не показываю.")
+  local ok, err = pcall(ShowItemWindow, href, full, true)
+  if not ok then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffff0000" .. ADDON .. "|r: " .. tostring(err))
   end
 end
+
+BidItemPopup_OnSlash = HandleBidItemCommand
 
 if hooksecurefunc then
   if SetSendMailMoney then

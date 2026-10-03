@@ -2,9 +2,11 @@
 ## Title: Bid Item Popup
 ## Notes: Opens a movable item window when a raid bid is announced.
 ## Author: Megerka
-## Version: 1.8
+## Version: 1.9
 ## DefaultState: Enabled
 ## SavedVariables: BidItemPopupDB
 
+DataBIS.lua
+DataStats.lua
 BidItemPopup.lua
 Options.lua
